@@ -1,0 +1,20 @@
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker build -t liad/react-test -f ../../client/Dockerfile.dev ../../client
+
+script:
+  - docker run -e CI=true liad/react-test npm test -- --coverage
+
+after_success:
+  - docker build -t liad/multi-client ../../client
+  - docker build -t liad/multi-nginx ../../nginx
+  - docker build -t liad/multi-server ../../server
+  - docker build -t liad/multi-worker ../../worker
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  - docker push liad/multi-client
+  - docker push liad/multi-nginx
+  - docker push liad/multi-api
+  - docker push liad/multi-worker
