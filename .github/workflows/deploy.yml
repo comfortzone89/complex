@@ -1,20 +1,24 @@
-sudo: required
-services:
-  - docker
+name: Deploy MultiDocker
+on:
+  push:
+    branches:
+      - main # check your repo, your default branch might be master!
 
-before_install:
-  - docker build -t liad/react-test -f ../../client/Dockerfile.dev ../../client
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+      - run: docker build -t shakenbake89/react-test -f ./client/Dockerfile.dev ./client
+      - run: docker run -e CI=true shakenbake89/react-test npm test
 
-script:
-  - docker run -e CI=true liad/react-test npm test -- --coverage
+      - run: docker build -t shakenbake89/multi-client ./client
+      - run: docker build -t shakenbake89/multi-nginx ./nginx
+      - run: docker build -t shakenbake89/multi-server ./server
+      - run: docker build -t shakenbake89/multi-worker ./worker
 
-after_success:
-  - docker build -t liad/multi-client ../../client
-  - docker build -t liad/multi-nginx ../../nginx
-  - docker build -t liad/multi-server ../../server
-  - docker build -t liad/multi-worker ../../worker
-  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
-  - docker push liad/multi-client
-  - docker push liad/multi-nginx
-  - docker push liad/multi-api
-  - docker push liad/multi-worker
+      - run: docker push shakenbake89/multi-client
+      - run: docker push shakenbake89/multi-nginx
+      - run: docker push shakenbake89/multi-server
+      - run: docker push shakenbake89/multi-worker
